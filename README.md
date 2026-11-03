@@ -31,3 +31,26 @@ $ pnpm run dev
 ```
 
 Open <http://localhost:5173/> in your browser.
+
+Now, here is how to open a psql REPL against the application database through the HTTP endpoint:
+
+```sh
+$ mise run websocat
+[websocat] $ ./scripts/websocat.sh
+websocat: tcp-l:127.0.0.1:15432 -> ws://localhost:5173/api/pg
+```
+
+In a second terminal:
+
+```
+$ mise run psql-tunnel
+[psql-tunnel] $ ./scripts/psql_tunnel.sh
+psql (18.4)
+Type "help" for help.
+
+postgres=# select * from contacts limit 2;
+ id | firstname | lastname |          created_at
+----+-----------+----------+-------------------------------
+  1 | John1     | Doe1     | 2026-11-03 13:34:38.372416+00
+  2 | John2     | Doe2     | 2026-11-03 13:34:38.372416+00
+```

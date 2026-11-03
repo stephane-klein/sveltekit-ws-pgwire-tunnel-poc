@@ -13,6 +13,7 @@ _.source = [
 [tools]
 node = "24.21.0"
 pnpm = "12.11.2"
+websocat = "1.14.1"
 "conda:postgresql" = "18.4" # to install PostgreSQL clients: psql, pg_dump, etc
 
 
@@ -26,3 +27,11 @@ run = "psql \"${MY_APP_POSTGRES_URL}\""
 description = "Load a SQL file into the PostgreSQL database"
 usage = 'arg "<file>" help="Path to the SQL file to execute"'
 run = './scripts/load_sql.sh "${usage_file}"'
+
+[tasks.websocat]
+description = "Run the websocat bridge for the PostgreSQL tunnel"
+run = './scripts/websocat.sh'
+
+[tasks.psql-tunnel]
+description = "Open a psql REPL through the websocat tunnel"
+run = './scripts/psql_tunnel.sh'
