@@ -8,5 +8,4 @@ if ! ss -ltn 2>/dev/null | grep -q '127.0.0.1:15432'; then
   exit 1
 fi
 
-PGPASSWORD=password psql \
-  "host=127.0.0.1 port=15432 user=postgres dbname=postgres sslmode=disable"
+psql "host=127.0.0.1 port=15432 sslmode=disable"

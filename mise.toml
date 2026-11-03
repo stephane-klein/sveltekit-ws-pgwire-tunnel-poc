@@ -28,6 +28,11 @@ description = "Load a SQL file into the PostgreSQL database"
 usage = 'arg "<file>" help="Path to the SQL file to execute"'
 run = './scripts/load_sql.sh "${usage_file}"'
 
+[tasks.make-token]
+description = "Generate a session JWT for an application user"
+usage = 'arg "<sub>" help="Application user id"'
+run = 'node scripts/make_token.js "${usage_sub}"'
+
 [tasks.websocat]
 description = "Run the websocat bridge for the PostgreSQL tunnel"
 run = './scripts/websocat.sh'

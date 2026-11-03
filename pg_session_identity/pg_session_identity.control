@@ -1,0 +1,4 @@
+comment = 'Pin a verified identity to a PostgreSQL session'
+default_version = '1.0'
+module_pathname = '$libdir/pg_session_identity'
+relocatable = false

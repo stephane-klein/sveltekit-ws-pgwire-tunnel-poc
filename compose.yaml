@@ -1,15 +1,23 @@
 services:
   postgres:
-    image: postgres:18.4
+    build:
+      context: ./pg_session_identity
+      dockerfile: Containerfile
     restart: unless-stopped
     ports:
       - 5432
     environment:
-      POSTGRES_DB: postgres
+      POSTGRES_DB: appdb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
+    command: >-
+      postgres
+      -c shared_preload_libraries=pg_session_identity
+      -c pg_session_identity.secret=${PG_SESSION_IDENTITY_SECRET}
+      -c pg_session_identity.role=app_user
     volumes:
       - postgres:/var/lib/postgresql/
+      - ./sqls/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "sh", "-c", "pg_isready -U $$POSTGRES_USER -h $$(hostname -i)"]
       interval: 10s

@@ -20,37 +20,111 @@ and
 [Creating security policies](https://postgraphile.org/postgraphile/5/required-knowledge#creating-security-policies)
 sections of the [PostGraphile](https://postgraphile.org/postgraphile/5/) documentation.
 
+## Architecture
+
+```text
+psql
+  │ 127.0.0.1:15432, sslmode=disable
+  ▼
+websocat              (Authorization: Bearer <JWT>)
+  │ WSS /api/pg
+  ▼
+SvelteKit tunnel      (rewrites StartupMessage)
+  │ TCP
+  ▼
+PostgreSQL            (pg_session_identity + RLS)
+```
+
+The SvelteKit endpoint verifies the JWT during the WebSocket handshake. It then
+opens a TCP connection to PostgreSQL and rewrites the client's `StartupMessage`,
+the first message of the PostgreSQL wire protocol. The `user` and `database`
+values sent by `psql` are discarded, and the same token is copied into
+`app.token`. The rewritten PostgreSQL startup message contains the following
+parameters:
+
+```text
+user      = app_user
+database  = appdb
+app.token = <JWT>
+```
+
+PostgreSQL authenticates `app_user` with `trust`, which means no password.
+Access to this role is protected by the
+[pg_session_identity](./pg_session_identity/) extension.
+
+The [pg_session_identity](./pg_session_identity/) extension rejects the
+connection unless the JWT is valid. The application user is the `sub` claim.
+There is no PostgreSQL password for the tunnel user.
+
+The `pg_session_identity` extension verifies the JWT at connection startup and
+stores its claims in backend memory for the lifetime of the session.
+`session_identity.current_sub()` returns the `sub` claim of that verified
+token. Unlike a custom setting such as [`current_setting('app.user')`](https://www.postgresql.org/docs/current/functions-admin.html#FUNCTIONS-ADMIN-SET),
+it has no setter: `SET`, `RESET` and `DISCARD ALL` cannot change it. PostgreSQL row-level
+security (RLS) policies can therefore rely on it to restrict access to rows:
+
+```sql
+ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY contacts_owner ON contacts
+  USING (owner_id = (SELECT session_identity.current_sub()))
+  WITH CHECK (owner_id = (SELECT session_identity.current_sub()));
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON contacts TO app_user;
+```
+
+Now go to the [Getting started](#getting-started) section to run a demo.
+
 ## Getting started
 
-```
+```sh
 $ mise install
 $ pnpm install
-$ podman compose up -d
+$ podman compose up -d --build
 $ mise run load-sql sqls/schema.sql
 $ pnpm run dev
 ```
 
-Open <http://localhost:5173/> in your browser.
+Open <http://localhost:5173/>. The web application connects as `postgres` and
+sees all rows.
 
-Now, here is how to open a psql REPL against the application database through the HTTP endpoint:
+## Connect through the tunnel
+
+Generate a token for a user:
+
+```sh
+$ export PG_SESSION_TOKEN="$(mise run make-token alice)"
+```
+
+Start the bridge:
 
 ```sh
 $ mise run websocat
-[websocat] $ ./scripts/websocat.sh
-websocat: tcp-l:127.0.0.1:15432 -> ws://localhost:5173/api/pg
 ```
 
 In a second terminal:
 
-```
+```sh
 $ mise run psql-tunnel
-[psql-tunnel] $ ./scripts/psql_tunnel.sh
-psql (18.4)
-Type "help" for help.
+```
 
-postgres=# select * from contacts limit 2;
- id | firstname | lastname |          created_at
-----+-----------+----------+-------------------------------
-  1 | John1     | Doe1     | 2026-11-03 13:34:38.372416+00
-  2 | John2     | Doe2     | 2026-11-03 13:34:38.372416+00
+No password, no database name, no user name. The tunnel forces them.
+
+Inside `psql`:
+
+```sql
+select current_user;                   -- app_user
+select session_identity.current_sub(); -- alice
+select count(*) from contacts;         -- 25
+```
+
+Alice sees only the rows with `owner_id = 'alice'`. The RLS policy uses
+`session_identity.current_sub()`.
+
+To test another user, stop `websocat`, generate a token for `bob`, and restart
+it:
+
+```sh
+$ export PG_SESSION_TOKEN="$(mise run make-token bob)"
+$ mise run websocat
 ```

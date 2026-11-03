@@ -1,0 +1,30 @@
+# syntax=docker/dockerfile:1
+
+FROM postgres:18.4 AS builder
+
+# libkrb5-dev provides gssapi/gssapi.h, included by libpq-be.h.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      build-essential \
+      postgresql-server-dev-18 \
+      libssl-dev \
+      libkrb5-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+COPY Makefile pg_session_identity.control pg_session_identity--1.0.sql ./
+COPY src ./src
+
+RUN make clean \
+ && make -j"$(nproc)" \
+ && make install DESTDIR=/install
+
+FROM postgres:18.4
+
+COPY --from=builder /install/usr/lib/postgresql/18/lib/pg_session_identity.so \
+     /usr/lib/postgresql/18/lib/
+COPY --from=builder /install/usr/share/postgresql/18/extension/pg_session_identity.control \
+     /usr/share/postgresql/18/extension/
+COPY --from=builder /install/usr/share/postgresql/18/extension/pg_session_identity--1.0.sql \
+     /usr/share/postgresql/18/extension/
