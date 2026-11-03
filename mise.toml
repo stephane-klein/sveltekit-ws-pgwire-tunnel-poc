@@ -1,7 +1,28 @@
+[settings]
+experimental = true
+
 [deps.pnpm]
 auto = true
+
+[env]
+_.source = [
+  { path = '.envrc', cacheable = false },
+  { path = 'scripts/load_postgres_variables.sh', tools = true, cacheable = false },
+]
 
 [tools]
 node = "24.21.0"
 pnpm = "12.11.2"
 "conda:postgresql" = "18.4" # to install PostgreSQL clients: psql, pg_dump, etc
+
+
+[shell_alias]
+reload = "source scripts/load_postgres_variables.sh"
+
+[tasks.enter-in-pg]
+run = "psql \"${MY_APP_POSTGRES_URL}\""
+
+[tasks.load-sql]
+description = "Load a SQL file into the PostgreSQL database"
+usage = 'arg "<file>" help="Path to the SQL file to execute"'
+run = './scripts/load_sql.sh "${usage_file}"'

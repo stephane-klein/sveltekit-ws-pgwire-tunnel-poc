@@ -19,3 +19,15 @@ recommend reading the
 and
 [Creating security policies](https://postgraphile.org/postgraphile/5/required-knowledge#creating-security-policies)
 sections of the [PostGraphile](https://postgraphile.org/postgraphile/5/) documentation.
+
+## Getting started
+
+```
+$ mise install
+$ pnpm install
+$ podman compose up -d
+$ mise run load-sql sqls/schema.sql
+$ pnpm run dev
+```
+
+Open <http://localhost:5173/> in your browser.
