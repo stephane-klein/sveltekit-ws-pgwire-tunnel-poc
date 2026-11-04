@@ -90,7 +90,7 @@ $ pnpm run dev
 Open <http://localhost:5173/>. The web application connects as `postgres` and
 sees all rows.
 
-## Connect through the tunnel
+## Connect to Postgres through the tunnel with JWT
 
 Generate a token for a user:
 
@@ -129,6 +129,51 @@ it:
 ```sh
 $ export PG_SESSION_TOKEN="$(mise run make-token bob)"
 $ mise run websocat
+```
+
+## Connect to Postgres through Websocket with user / password
+
+The same `/api/pg` endpoint also supports a direct mode for PostgreSQL roles that
+authenticate with their own password. The bearer token selects the mode:
+
+- a valid JWT → JWT mode, forced `app_user` (see above);
+- the value of `PG_TUNNEL_DIRECT_TOKEN` → direct mode.
+
+Direct mode is disabled unless both `PG_TUNNEL_DIRECT_TOKEN` and
+`PG_TUNNEL_DIRECT_ROLES` are set.
+
+The database name is not selectable. The tunnel always uses the application
+database (`PG_TUNNEL_DATABASE`, `appdb` by default); any `dbname` sent by the
+client is ignored.
+
+Start the direct bridge on port 15433:
+
+```sh
+$ mise run websocat-direct
+```
+
+In a second terminal:
+
+```sh
+$ mise run psql-direct postgres
+Password for user postgres: xxxxxxx
+psql (18.4)
+Type "help" for help.
+
+appdb=# \dt
+            List of tables
+ Schema |   Name   | Type  |  Owner
+--------+----------+-------+----------
+ public | contacts | table | postgres
+(1 row)
+
+appdb=#
+```
+
+Or call `psql` directly:
+
+```sh
+$ psql "host=127.0.0.1 port=15433 user=postgres dbname=appdb sslmode=disable"
 ```
 
 ## Query /app/pg WebSocket from a Node.js script
