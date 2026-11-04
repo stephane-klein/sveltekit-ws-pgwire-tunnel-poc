@@ -33,6 +33,11 @@ description = "Generate a session JWT for an application user"
 usage = 'arg "<sub>" help="Application user id"'
 run = 'node scripts/make_token.js "${usage_sub}"'
 
+[tasks.query-contacts]
+description = "Run select * from contacts through the WebSocket tunnel"
+usage = 'arg "<sub>" help="Application user id"'
+run = 'export PG_SESSION_TOKEN="$(node scripts/make_token.js "${usage_sub}")" && node src/cli/query_contacts.js'
+
 [tasks.websocat]
 description = "Run the websocat bridge for the PostgreSQL tunnel"
 run = './scripts/websocat.sh'

@@ -35,6 +35,8 @@ SvelteKit tunnel      (rewrites StartupMessage)
 PostgreSQL            (pg_session_identity + RLS)
 ```
 
+Websocat is <https://github.com/vi/websocat>.
+
 The SvelteKit endpoint verifies the JWT during the WebSocket handshake. It then
 opens a TCP connection to PostgreSQL and rewrites the client's `StartupMessage`,
 the first message of the PostgreSQL wire protocol. The `user` and `database`
@@ -128,3 +130,22 @@ it:
 $ export PG_SESSION_TOKEN="$(mise run make-token bob)"
 $ mise run websocat
 ```
+
+## Query /app/pg WebSocket from a Node.js script
+
+The script uses neither `websocat` nor a local TCP port. It opens a WebSocket
+to `/api/pg`, presents it to postgres.js as a duplex stream, and runs
+`select * from contacts`.
+
+```sh
+$ export PG_SESSION_TOKEN="$(mise run make-token alice)"
+$ node src/cli/query_contacts.js
+```
+
+Or, from the devbox, in one command:
+
+```sh
+$ mise run query-contacts alice
+```
+
+The rows are filtered by the RLS policy for `alice`.
