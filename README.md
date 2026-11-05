@@ -115,13 +115,44 @@ No password, no database name, no user name. The tunnel forces them.
 Inside `psql`:
 
 ```sql
-select current_user;                   -- app_user
-select session_identity.current_sub(); -- alice
-select count(*) from contacts;         -- 25
+devbox=> select current_user;                   -- app_user
+ current_user
+--------------
+ app_user
+(1 row)
+
+devbox=> select session_identity.current_sub(); -- alice
+ current_sub
+-------------
+ alice
+(1 row)
+
+devbox=> select * from contacts order by id desc limit 2;
+ id | owner_id | firstname | lastname |          created_at
+----+----------+-----------+----------+-------------------------------
+ 50 | alice    | John50    | Doe50    | 2026-11-05 13:13:13.575593+00
+ 48 | alice    | John48    | Doe48    | 2026-11-05 13:13:13.575593+00
+(2 rows)
 ```
 
 Alice sees only the rows with `owner_id = 'alice'`. The RLS policy uses
 `session_identity.current_sub()`.
+
+When Alice then creates a new contact, the row is automatically attached to
+Alice:
+
+```
+devbox=> insert into contacts (firstname, lastname) VALUES('Stéphane', 'Klein');
+INSERT 0 1
+
+devbox=> select * from contacts order by id desc limit 2;
+ id | owner_id | firstname | lastname |          created_at
+----+----------+-----------+----------+-------------------------------
+ 51 | alice    | Stéphane  | Klein    | 2026-11-05 13:15:24.152883+00
+ 50 | alice    | John50    | Doe50    | 2026-11-05 13:13:13.575593+00
+(2 rows)
+```
+
 
 To test another user, stop `websocat`, generate a token for `bob`, and restart
 it:

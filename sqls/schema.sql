@@ -12,7 +12,7 @@ COMMENT ON SCHEMA public IS 'standard public schema';
 
 CREATE TABLE contacts (
     id         BIGINT                   GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    owner_id   TEXT                     NOT NULL,
+    owner_id   TEXT                     NOT NULL DEFAULT session_identity.current_sub(),
     firstname  TEXT                     NOT NULL,
     lastname   TEXT                     NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -32,4 +32,10 @@ CREATE POLICY contacts_owner ON contacts
   USING (owner_id = (SELECT session_identity.current_sub()))
   WITH CHECK (owner_id = (SELECT session_identity.current_sub()));
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON contacts TO app_user;
+-- The default privileges at the top of this file grant INSERT and UPDATE to
+-- PUBLIC, so revoke from PUBLIC as well as from app_user. Then grant only the
+-- columns a client may write: owner_id can only come from its DEFAULT.
+REVOKE INSERT, UPDATE ON contacts FROM PUBLIC, app_user;
+GRANT SELECT, DELETE ON contacts TO app_user;
+GRANT INSERT (firstname, lastname) ON contacts TO app_user;
+GRANT UPDATE (firstname, lastname) ON contacts TO app_user;
